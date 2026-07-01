@@ -12,12 +12,14 @@ import {
   type ImportContactRow,
   type InvalidContactRow,
 } from '../utils/importFile';
+import { useAuth } from '../state/useAuth';
 
 interface DuplicateContactRow extends ImportContactRow {
   matchedContactId: string;
 }
 
 export default function ImportPage() {
+  const { isManager } = useAuth();
   const { contacts, error: contactsError } = useContacts();
   const { brokers, error: brokersError } = useBrokers();
   const [file, setFile] = useState<File | null>(null);
@@ -126,6 +128,12 @@ export default function ImportPage() {
         description="Upload contacts from CSV or XLSX, review validation results, and import valid rows."
       />
 
+      {!isManager ? (
+        <p className="mb-4 rounded border border-amber/30 bg-amber/10 p-3 text-sm text-amber">
+          Import tools are available to admins and managers only.
+        </p>
+      ) : null}
+
       <div className="rounded border border-line bg-white p-5">
         <label className="flex min-h-40 cursor-pointer flex-col items-center justify-center rounded border border-dashed border-line bg-paper px-4 py-8 text-center">
           <Upload className="text-navy" size={28} />
@@ -137,6 +145,7 @@ export default function ImportPage() {
             accept=".csv,.xlsx"
             className="sr-only"
             onChange={handleFileChange}
+            disabled={!isManager}
           />
         </label>
 
@@ -146,7 +155,7 @@ export default function ImportPage() {
           </p>
           <button
             type="button"
-            disabled={!preview?.validRows.length || busy}
+            disabled={!isManager || !preview?.validRows.length || busy}
             onClick={handleImportValidRows}
             className="rounded bg-navy px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >

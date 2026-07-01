@@ -1,6 +1,7 @@
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import './firebaseAdmin.js';
+import { requireAnyRole } from './roleSecurity.js';
 
 const db = getFirestore();
 const confirmationPhrase = 'DELETE ALL DATA';
@@ -14,6 +15,8 @@ export const adminResetData = onCall<AdminResetInput>(async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'You must be signed in to reset data.');
   }
+
+  await requireAnyRole(request.auth.uid, ['admin']);
 
   if (request.data.confirmation !== confirmationPhrase || request.data.backupConfirmed !== true) {
     throw new HttpsError('failed-precondition', 'Reset confirmation is incomplete.');

@@ -20,25 +20,27 @@ interface NavItem {
   to: string;
   label: string;
   icon: LucideIcon;
+  roles?: Array<'admin' | 'manager' | 'user'>;
 }
 
 const navItems: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/contacts', label: 'Contacts', icon: Users },
-  { to: '/brokers', label: 'Brokers', icon: UserRoundCheck },
+  { to: '/brokers', label: 'Brokers', icon: UserRoundCheck, roles: ['admin', 'manager'] },
   { to: '/campaign-a', label: 'Campaign A', icon: Mail },
   { to: '/campaign-b', label: 'Campaign B', icon: Mail },
   { to: '/campaign-c', label: 'Campaign C', icon: Mail },
-  { to: '/email-queue', label: 'Email Queue', icon: Send },
+  { to: '/email-queue', label: 'Email Queue', icon: Send, roles: ['admin', 'manager'] },
   { to: '/follow-ups', label: 'Follow-ups', icon: CalendarClock },
-  { to: '/missing-emails', label: 'Missing Emails', icon: MailQuestion },
-  { to: '/import', label: 'Import', icon: FileSpreadsheet },
-  { to: '/export', label: 'Export', icon: Download },
+  { to: '/missing-emails', label: 'Missing Emails', icon: MailQuestion, roles: ['admin', 'manager'] },
+  { to: '/import', label: 'Import', icon: FileSpreadsheet, roles: ['admin', 'manager'] },
+  { to: '/export', label: 'Export', icon: Download, roles: ['admin', 'manager'] },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
 export default function AppLayout() {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, role } = useAuth();
+  const visibleNavItems = navItems.filter((item) => !item.roles || item.roles.includes(role));
 
   return (
     <div className="min-h-screen bg-paper text-ink">
@@ -56,7 +58,7 @@ export default function AppLayout() {
           </div>
 
           <nav className="flex-1 space-y-1 px-3 py-4">
-            {navItems.map((item) => (
+            {visibleNavItems.map((item) => (
               <SidebarLink key={item.to} {...item} />
             ))}
           </nav>
@@ -92,7 +94,7 @@ export default function AppLayout() {
             </button>
           </div>
           <nav className="flex gap-2 overflow-x-auto px-4 pb-3">
-            {navItems.map(({ to, label, icon: Icon }) => (
+            {visibleNavItems.map(({ to, label, icon: Icon }) => (
               <NavLink
                 key={to}
                 to={to}

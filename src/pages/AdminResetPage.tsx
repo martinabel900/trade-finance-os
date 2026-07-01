@@ -2,10 +2,12 @@ import { AlertTriangle } from 'lucide-react';
 import { useState } from 'react';
 import PageHeader from '../components/PageHeader.jsx';
 import { resetAdminData } from '../services/adminResetService';
+import { useAuth } from '../state/useAuth';
 
 const confirmationPhrase = 'DELETE ALL DATA';
 
 export default function AdminResetPage() {
+  const { isAdmin } = useAuth();
   const [confirmation, setConfirmation] = useState('');
   const [backupConfirmed, setBackupConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -35,7 +37,13 @@ export default function AdminResetPage() {
         description="Temporary handover tool for clearing operational Firestore data."
       />
 
-      <div className="rounded border border-rose/30 bg-rose/10 p-5">
+      {!isAdmin ? (
+        <p className="rounded border border-rose/30 bg-rose/10 p-3 text-sm text-rose">
+          Admin Data Reset is available to admins only.
+        </p>
+      ) : null}
+
+      {isAdmin ? <div className="rounded border border-rose/30 bg-rose/10 p-5">
         <div className="flex gap-3">
           <AlertTriangle className="mt-0.5 shrink-0 text-rose" size={22} />
           <div>
@@ -48,9 +56,9 @@ export default function AdminResetPage() {
             </p>
           </div>
         </div>
-      </div>
+      </div> : null}
 
-      <div className="mt-5 rounded border border-line bg-white p-5">
+      {isAdmin ? <div className="mt-5 rounded border border-line bg-white p-5">
         <label className="block">
           <span className="text-xs font-medium uppercase tracking-wide text-steel">
             Type DELETE ALL DATA
@@ -82,7 +90,7 @@ export default function AdminResetPage() {
         >
           {busy ? 'Resetting Data' : 'Reset Firestore Data'}
         </button>
-      </div>
+      </div> : null}
     </section>
   );
 }

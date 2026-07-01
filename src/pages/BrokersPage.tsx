@@ -20,12 +20,14 @@ import {
   type ImportBrokerRow,
   type InvalidBrokerRow,
 } from '../utils/importBrokersFile';
+import { useAuth } from '../state/useAuth';
 
 interface DuplicateBrokerRow extends ImportBrokerRow {
   matchedBrokerId: string;
 }
 
 export default function BrokersPage() {
+  const { isManager } = useAuth();
   const { brokers, loading, error } = useBrokers();
   const { contacts } = useContacts();
   const [query, setQuery] = useState('');
@@ -75,14 +77,18 @@ export default function BrokersPage() {
           <option value="All">All Statuses</option>
           {BROKER_STATUSES.map((item) => <option key={item} value={item}>{item}</option>)}
         </select>
-        <button type="button" onClick={() => setEditingBroker(emptyBroker)} className="flex items-center justify-center gap-2 rounded bg-navy px-4 py-2 text-sm font-semibold text-white">
-          <Plus size={16} />
-          Add Broker
-        </button>
-        <button type="button" onClick={() => setImportOpen(true)} className="flex items-center justify-center gap-2 rounded border border-line bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-paper">
-          <Upload size={16} />
-          Import Brokers
-        </button>
+        {isManager ? (
+          <>
+            <button type="button" onClick={() => setEditingBroker(emptyBroker)} className="flex items-center justify-center gap-2 rounded bg-navy px-4 py-2 text-sm font-semibold text-white">
+              <Plus size={16} />
+              Add Broker
+            </button>
+            <button type="button" onClick={() => setImportOpen(true)} className="flex items-center justify-center gap-2 rounded border border-line bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-paper">
+              <Upload size={16} />
+              Import Brokers
+            </button>
+          </>
+        ) : null}
       </div>
 
       <div className="overflow-hidden rounded border border-line bg-white">
@@ -121,8 +127,12 @@ export default function BrokersPage() {
                     <td className="px-3 py-3"><InitialsBadge initials={broker.updatedByInitials || broker.createdByInitials} name={broker.updatedByName || broker.createdByName} /></td>
                     <td className="px-3 py-3">
                       <div className="flex justify-end gap-2">
-                        <button type="button" title="Edit broker" onClick={() => setEditingBroker(broker)} className="grid h-9 w-9 place-items-center rounded border border-line text-steel hover:bg-paper"><Edit3 size={16} /></button>
-                        <button type="button" title="Mark inactive" onClick={() => handleMarkInactive(broker)} className="grid h-9 w-9 place-items-center rounded border border-line text-steel hover:bg-paper"><UserX size={16} /></button>
+                        {isManager ? (
+                          <>
+                            <button type="button" title="Edit broker" onClick={() => setEditingBroker(broker)} className="grid h-9 w-9 place-items-center rounded border border-line text-steel hover:bg-paper"><Edit3 size={16} /></button>
+                            <button type="button" title="Mark inactive" onClick={() => handleMarkInactive(broker)} className="grid h-9 w-9 place-items-center rounded border border-line text-steel hover:bg-paper"><UserX size={16} /></button>
+                          </>
+                        ) : null}
                       </div>
                     </td>
                   </tr>

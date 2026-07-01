@@ -22,6 +22,7 @@ import ContactFormModal from './ContactFormModal';
 import InitialsBadge from './InitialsBadge';
 import LogReplyModal from './LogReplyModal';
 import { isValidEmail } from '../utils/emailValidation';
+import { useAuth } from '../state/useAuth';
 
 interface ContactsTableProps {
   contacts: Contact[];
@@ -31,6 +32,7 @@ interface ContactsTableProps {
 type EditingContact = Contact | ContactInput;
 
 export default function ContactsTable({ contacts, fixedCampaign }: ContactsTableProps) {
+  const { isManager } = useAuth();
   const [query, setQuery] = useState('');
   const [campaign, setCampaign] = useState(fixedCampaign || 'All');
   const [batch, setBatch] = useState('All');
@@ -278,14 +280,16 @@ export default function ContactsTable({ contacts, fixedCampaign }: ContactsTable
           <option value="Show All">Show All</option>
         </select>
 
-        <button
-          type="button"
-          onClick={() => setEditingContact({ ...emptyContact, campaign: fixedCampaign || 'A' })}
-          className="flex items-center justify-center gap-2 rounded bg-navy px-3 py-2 text-sm font-semibold text-white"
-        >
-          <Plus size={16} />
-          New Contact
-        </button>
+        {isManager ? (
+          <button
+            type="button"
+            onClick={() => setEditingContact({ ...emptyContact, campaign: fixedCampaign || 'A' })}
+            className="flex items-center justify-center gap-2 rounded bg-navy px-3 py-2 text-sm font-semibold text-white"
+          >
+            <Plus size={16} />
+            New Contact
+          </button>
+        ) : null}
       </div>
 
       {actionError ? (
@@ -361,7 +365,7 @@ export default function ContactsTable({ contacts, fixedCampaign }: ContactsTable
                   </td>
                   <td className="px-3 py-3">
                     <div className="flex justify-end gap-1.5">
-                      {isValidEmail(contact.email) ? (
+                      {isManager && isValidEmail(contact.email) ? (
                         <IconButton label="Send email" onClick={() => setEmailPreviewContacts([contact])}>
                           <Mail size={16} />
                         </IconButton>
@@ -369,35 +373,39 @@ export default function ContactsTable({ contacts, fixedCampaign }: ContactsTable
                       <IconButton label="Log reply" onClick={() => setReplyContact(contact)}>
                         <MessageSquareReply size={16} />
                       </IconButton>
-                      <IconButton
-                        label="Mark email sent"
-                        onClick={() =>
-                          handleQuickUpdate(contact.id, { emailStatus: 'Sent' }, {
-                            type: 'email_sent',
-                            message: 'Email marked as sent.',
-                          })
-                        }
-                      >
-                        <MailCheck size={16} />
-                      </IconButton>
-                      <IconButton
-                        label="Mark replied"
-                        onClick={() =>
-                          handleQuickUpdate(contact.id, { replyStatus: 'Replied' }, {
-                            type: 'replied',
-                            message: 'Contact marked as replied.',
-                          })
-                        }
-                      >
-                        <CheckCircle2 size={16} />
-                      </IconButton>
+                      {isManager ? (
+                        <>
+                          <IconButton
+                            label="Mark email sent"
+                            onClick={() =>
+                              handleQuickUpdate(contact.id, { emailStatus: 'Sent' }, {
+                                type: 'email_sent',
+                                message: 'Email marked as sent.',
+                              })
+                            }
+                          >
+                            <MailCheck size={16} />
+                          </IconButton>
+                          <IconButton
+                            label="Mark replied"
+                            onClick={() =>
+                              handleQuickUpdate(contact.id, { replyStatus: 'Replied' }, {
+                                type: 'replied',
+                                message: 'Contact marked as replied.',
+                              })
+                            }
+                          >
+                            <CheckCircle2 size={16} />
+                          </IconButton>
+                        </>
+                      ) : null}
                       <IconButton label="Add notes" onClick={() => setEditingContact(contact)}>
                         <MessageSquareText size={16} />
                       </IconButton>
                       <IconButton label="Edit contact" onClick={() => setEditingContact(contact)}>
                         <Edit3 size={16} />
                       </IconButton>
-                      {contact.dealStatus !== 'Archived' ? (
+                      {isManager && contact.dealStatus !== 'Archived' ? (
                         <IconButton label="Archive contact" onClick={() => handleArchiveContact(contact)}>
                           <Archive size={16} />
                         </IconButton>

@@ -11,8 +11,10 @@ import {
   type EmailQueueStatus,
 } from '../services/emailQueueService';
 import { useState } from 'react';
+import { useAuth } from '../state/useAuth';
 
 export default function EmailQueuePage() {
+  const { isManager } = useAuth();
   const { items, loading, error } = useEmailQueue();
   const [status, setStatus] = useState<EmailQueueStatus | 'All'>('All');
   const [actionError, setActionError] = useState('');
@@ -71,14 +73,16 @@ export default function EmailQueuePage() {
       <div className="mb-4 flex flex-col gap-3 rounded border border-line bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-steel">{loading ? 'Loading queue' : `${visibleItems.length} queue records`}</p>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <button
-            type="button"
-            onClick={handleProcessQueueNow}
-            disabled={processing}
-            className="rounded bg-navy px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-          >
-            {processing ? 'Processing' : 'Process Queue Now'}
-          </button>
+          {isManager ? (
+            <button
+              type="button"
+              onClick={handleProcessQueueNow}
+              disabled={processing}
+              className="rounded bg-navy px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            >
+              {processing ? 'Processing' : 'Process Queue Now'}
+            </button>
+          ) : null}
           <select
             value={status}
             onChange={(event) => setStatus(event.target.value as EmailQueueStatus | 'All')}
@@ -111,7 +115,7 @@ export default function EmailQueuePage() {
             </thead>
             <tbody className="divide-y divide-line">
               {visibleItems.map((item) => (
-                <QueueRow key={item.id} item={item} onRetry={handleRetry} onCancel={handleCancel} />
+                <QueueRow key={item.id} item={item} canManage={isManager} onRetry={handleRetry} onCancel={handleCancel} />
               ))}
               {!visibleItems.length ? (
                 <tr>
@@ -130,10 +134,12 @@ export default function EmailQueuePage() {
 
 function QueueRow({
   item,
+  canManage,
   onRetry,
   onCancel,
 }: {
   item: EmailQueueItem;
+  canManage: boolean;
   onRetry: (itemId: string) => void;
   onCancel: (itemId: string) => void;
 }) {
@@ -160,7 +166,7 @@ function QueueRow({
       </td>
       <td className="px-4 py-3">
         <div className="flex justify-end gap-2">
-          {item.status === 'Failed' ? (
+          {canManage && item.status === 'Failed' ? (
             <button
               type="button"
               onClick={() => onRetry(item.id)}
@@ -171,7 +177,7 @@ function QueueRow({
               <RotateCcw size={16} />
             </button>
           ) : null}
-          {item.status === 'Pending' ? (
+          {canManage && item.status === 'Pending' ? (
             <button
               type="button"
               onClick={() => onCancel(item.id)}

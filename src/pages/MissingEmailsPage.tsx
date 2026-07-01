@@ -15,10 +15,12 @@ import { enqueueBrokerMissingEmailRequest } from '../services/emailQueueService'
 import { getUserSignature } from '../utils/userAttribution';
 import { auth } from '../firebase/firebase';
 import { hasMissingClientEmail, isValidEmail } from '../utils/emailValidation';
+import { useAuth } from '../state/useAuth';
 
 type EditingContact = Contact | ContactInput;
 
 export default function MissingEmailsPage() {
+  const { isManager } = useAuth();
   const { contacts, loading, error } = useContacts();
   const [query, setQuery] = useState('');
   const [editingContact, setEditingContact] = useState<EditingContact | null>(null);
@@ -123,11 +125,15 @@ export default function MissingEmailsPage() {
                   <td className="px-3 py-3"><div className="flex justify-end gap-1.5">
                     <button title="Edit Contact" onClick={() => setEditingContact(contact)} className="grid h-9 w-9 place-items-center rounded border border-line"><Edit3 size={16} /></button>
                     <button title="Link / Change Broker" onClick={() => setEditingContact(contact)} className="grid h-9 w-9 place-items-center rounded border border-line"><Link2 size={16} /></button>
-                    <button title="Email Broker" onClick={() => handleEmailBroker(contact)} className="grid h-9 w-9 place-items-center rounded border border-line"><Mail size={16} /></button>
-                    <button title="Mark Broker Contacted" onClick={() => quickUpdate(contact, { nextAction: 'Broker contacted for client email' })} className="grid h-9 w-9 place-items-center rounded border border-line"><Mail size={16} /></button>
-                    <button title="Mark Research Needed" onClick={() => quickUpdate(contact, { nextAction: 'Research needed for client email' })} className="grid h-9 w-9 place-items-center rounded border border-line"><Search size={16} /></button>
-                    <button title="Mark Do Not Contact" onClick={() => quickUpdate(contact, { dealStatus: 'Do Not Contact' })} className="grid h-9 w-9 place-items-center rounded border border-line"><UserX size={16} /></button>
-                    <button title="Archive" onClick={() => handleArchive(contact)} className="grid h-9 w-9 place-items-center rounded border border-line"><Archive size={16} /></button>
+                    {isManager ? (
+                      <>
+                        <button title="Email Broker" onClick={() => handleEmailBroker(contact)} className="grid h-9 w-9 place-items-center rounded border border-line"><Mail size={16} /></button>
+                        <button title="Mark Broker Contacted" onClick={() => quickUpdate(contact, { nextAction: 'Broker contacted for client email' })} className="grid h-9 w-9 place-items-center rounded border border-line"><Mail size={16} /></button>
+                        <button title="Mark Research Needed" onClick={() => quickUpdate(contact, { nextAction: 'Research needed for client email' })} className="grid h-9 w-9 place-items-center rounded border border-line"><Search size={16} /></button>
+                        <button title="Mark Do Not Contact" onClick={() => quickUpdate(contact, { dealStatus: 'Do Not Contact' })} className="grid h-9 w-9 place-items-center rounded border border-line"><UserX size={16} /></button>
+                        <button title="Archive" onClick={() => handleArchive(contact)} className="grid h-9 w-9 place-items-center rounded border border-line"><Archive size={16} /></button>
+                      </>
+                    ) : null}
                   </div></td>
                 </tr>
               ))}

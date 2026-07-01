@@ -5,6 +5,7 @@ import { useBrokers } from '../hooks/useBrokers';
 import { useEmailQueue } from '../hooks/useEmailQueue';
 import { hasMissingClientEmail } from '../utils/emailValidation';
 import { downloadCsv, downloadJson, todayStamp } from '../utils/exportData';
+import { useAuth } from '../state/useAuth';
 
 const contactCsvHeaders = [
   'brokerName',
@@ -71,6 +72,7 @@ const brokerCsvHeaders = [
 ];
 
 export default function ExportPage() {
+  const { isAdmin, isManager } = useAuth();
   const { contacts, loading: contactsLoading, error: contactsError } = useContacts();
   const { brokers, loading: brokersLoading, error: brokersError } = useBrokers();
   const { items: emailQueue, loading: queueLoading, error: queueError } = useEmailQueue();
@@ -110,6 +112,12 @@ export default function ExportPage() {
     <section>
       <PageHeader title="Export" description="Download CRM contacts, email queue records, or a full backup." />
 
+      {!isManager ? (
+        <p className="mb-4 rounded border border-amber/30 bg-amber/10 p-3 text-sm text-amber">
+          Export tools are available to admins and managers only.
+        </p>
+      ) : null}
+
       {contactsError ? (
         <p className="mb-4 rounded border border-rose/30 bg-rose/10 p-3 text-sm text-rose">{contactsError}</p>
       ) : null}
@@ -120,48 +128,55 @@ export default function ExportPage() {
         <p className="mb-4 rounded border border-rose/30 bg-rose/10 p-3 text-sm text-rose">{brokersError}</p>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <ExportCard
-          title="Contacts CSV"
-          detail={`${contacts.length} contacts`}
-          buttonLabel="Export Contacts CSV"
-          disabled={loading}
-          onClick={handleExportContactsCsv}
-        />
-        <ExportCard
-          title="Email Queue CSV"
-          detail={`${emailQueue.length} queue records`}
-          buttonLabel="Export Email Queue CSV"
-          disabled={loading}
-          onClick={handleExportEmailQueueCsv}
-        />
-        <ExportCard
-          title="Full Backup JSON"
-          detail="Contacts, brokers, and email queue"
-          buttonLabel="Export Full Backup JSON"
-          disabled={loading}
-          onClick={handleExportFullBackupJson}
-        />
-      </div>
+      {isManager ? (
+        <div className="grid gap-4 lg:grid-cols-3">
+          <ExportCard
+            title="Contacts CSV"
+            detail={`${contacts.length} contacts`}
+            buttonLabel="Export Contacts CSV"
+            disabled={loading}
+            onClick={handleExportContactsCsv}
+          />
+          <ExportCard
+            title="Email Queue CSV"
+            detail={`${emailQueue.length} queue records`}
+            buttonLabel="Export Email Queue CSV"
+            disabled={loading}
+            onClick={handleExportEmailQueueCsv}
+          />
+          {isAdmin ? (
+            <ExportCard
+              title="Full Backup JSON"
+              detail="Contacts, brokers, and email queue"
+              buttonLabel="Export Full Backup JSON"
+              disabled={loading}
+              onClick={handleExportFullBackupJson}
+            />
+          ) : null}
+        </div>
+      ) : null}
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <ExportCard
-          title="Brokers CSV"
-          detail={`${brokers.length} brokers`}
-          buttonLabel="Export Brokers CSV"
-          disabled={loading}
-          onClick={handleExportBrokersCsv}
-        />
-        <ExportCard
-          title="Missing Emails CSV"
-          detail={`${missingEmailContacts.length} missing email contacts`}
-          buttonLabel="Export Missing Emails CSV"
-          disabled={loading}
-          onClick={handleExportMissingEmailsCsv}
-        />
-      </div>
+      {isManager ? (
+        <div className="mt-6 grid gap-4 lg:grid-cols-3">
+          <ExportCard
+            title="Brokers CSV"
+            detail={`${brokers.length} brokers`}
+            buttonLabel="Export Brokers CSV"
+            disabled={loading}
+            onClick={handleExportBrokersCsv}
+          />
+          <ExportCard
+            title="Missing Emails CSV"
+            detail={`${missingEmailContacts.length} missing email contacts`}
+            buttonLabel="Export Missing Emails CSV"
+            disabled={loading}
+            onClick={handleExportMissingEmailsCsv}
+          />
+        </div>
+      ) : null}
 
-      <div className="mt-6 rounded border border-line bg-white">
+      {isManager ? (
+        <div className="mt-6 rounded border border-line bg-white">
         <div className="border-b border-line px-5 py-4">
           <h2 className="text-base font-semibold">Archive</h2>
           <p className="mt-1 text-sm text-steel">Export contacts that have been safely archived.</p>
@@ -176,6 +191,7 @@ export default function ExportPage() {
           />
         </div>
       </div>
+      ) : null}
     </section>
   );
 }

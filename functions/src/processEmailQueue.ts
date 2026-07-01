@@ -3,6 +3,7 @@ import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/v2/https';
 import './firebaseAdmin.js';
 import { sendSmtpCampaignEmail } from './campaignEmail.js';
+import { requireAnyRole } from './roleSecurity.js';
 
 interface EmailQueueRecord {
   contactId: string;
@@ -49,6 +50,8 @@ export const processEmailQueueNow = onCall(async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'You must be signed in to process email queue.');
   }
+
+  await requireAnyRole(request.auth.uid, ['admin', 'manager']);
 
   const pendingSnapshot = await db
     .collection('emailQueue')

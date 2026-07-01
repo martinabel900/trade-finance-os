@@ -6,24 +6,96 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function userProfilePath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function hasUserProfile() {
+      return signedIn() && exists(userProfilePath());
+    }
+
+    function userRole() {
+      return hasUserProfile() ? get(userProfilePath()).data.role : 'user';
+    }
+
+    function isActiveUser() {
+      return signedIn() && (!hasUserProfile() || get(userProfilePath()).data.status == 'active');
+    }
+
+    function isAdmin() {
+      return isActiveUser() && userRole() == 'admin';
+    }
+
+    function isManager() {
+      return isActiveUser() && (userRole() == 'admin' || userRole() == 'manager');
+    }
+
+    function isOwnProfile(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function isValidSelfProfile(userId) {
+      return isOwnProfile(userId)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.status == 'active'
+        && (
+          request.resource.data.role == 'user'
+          || (
+            request.auth.token.email == 'sps.bangkok@gmail.com'
+            && request.resource.data.role == 'admin'
+          )
+        );
+    }
+
+    function isBootstrapAdminProfile(userId) {
+      return isOwnProfile(userId)
+        && request.auth.token.email == 'sps.bangkok@gmail.com'
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.role == 'admin'
+        && request.resource.data.status == 'active';
+    }
+
+    match /users/{userId} {
+      allow get: if isOwnProfile(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidSelfProfile(userId);
+      allow update: if (
+          isAdmin()
+          && !(isOwnProfile(userId) && request.resource.data.status == 'inactive')
+        )
+        || isBootstrapAdminProfile(userId);
+      allow delete: if false;
+    }
+
     match /contacts/{contactId} {
-      allow read, create, update, delete: if signedIn();
+      allow read: if isActiveUser();
+      allow create: if isManager();
+      allow update: if isActiveUser();
+      allow delete: if false;
 
       match /activity/{activityId} {
-        allow read, create, update, delete: if signedIn();
+        allow read, create: if isActiveUser();
+        allow update, delete: if false;
       }
     }
 
     match /emailQueue/{queueId} {
-      allow read, create, update, delete: if signedIn();
+      allow read: if isActiveUser();
+      allow create, update: if isManager();
+      allow delete: if false;
     }
 
     match /brokers/{brokerId} {
-      allow read, create, update, delete: if signedIn();
+      allow read: if isActiveUser();
+      allow create, update: if isManager();
+      allow delete: if false;
     }
 
     match /userSettings/{userId} {
-      allow read, create, update, delete: if signedIn() && request.auth.uid == userId;
+      allow read, create, update: if isActiveUser() && request.auth.uid == userId;
+      allow delete: if false;
     }
 
     match /{document=**} {

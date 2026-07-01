@@ -8,12 +8,14 @@ import type { Contact } from '../services/contactService';
 import { enqueueCampaignBatch } from '../services/emailQueueService';
 import type { EmailQueueTemplate } from '../services/emailQueueService';
 import { isValidEmail } from '../utils/emailValidation';
+import { useAuth } from '../state/useAuth';
 
 interface CampaignPageProps {
   campaign: 'A' | 'B' | 'C';
 }
 
 export default function CampaignPage({ campaign }: CampaignPageProps) {
+  const { isManager } = useAuth();
   const { contacts, loading, error } = useContacts();
   const [batchPreviewContacts, setBatchPreviewContacts] = useState<Contact[]>([]);
   const [sendingBatch, setSendingBatch] = useState(false);
@@ -46,15 +48,17 @@ export default function CampaignPage({ campaign }: CampaignPageProps) {
           title={`Campaign ${campaign}`}
           description={`Manage outreach progress for contacts assigned to Campaign ${campaign}.`}
         />
-        <button
-          type="button"
-          disabled={loading || !sendableContacts.length}
-          onClick={() => setBatchPreviewContacts(sendableContacts)}
-          className="flex items-center justify-center gap-2 rounded bg-navy px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-        >
-          <Mail size={16} />
-          Send Batch
-        </button>
+        {isManager ? (
+          <button
+            type="button"
+            disabled={loading || !sendableContacts.length}
+            onClick={() => setBatchPreviewContacts(sendableContacts)}
+            className="flex items-center justify-center gap-2 rounded bg-navy px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            <Mail size={16} />
+            Send Batch
+          </button>
+        ) : null}
       </div>
       {error ? <p className="mb-4 rounded border border-rose/30 bg-rose/10 p-3 text-sm text-rose">{error}</p> : null}
       {sendError ? <p className="mb-4 rounded border border-rose/30 bg-rose/10 p-3 text-sm text-rose">{sendError}</p> : null}

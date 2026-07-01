@@ -7,6 +7,7 @@ import LogReplyModal from '../components/LogReplyModal';
 import PageHeader from '../components/PageHeader.jsx';
 import { useContacts } from '../hooks/useContacts';
 import { archiveContact, type Contact, type ContactInput } from '../services/contactService';
+import { useAuth } from '../state/useAuth';
 
 interface FollowUpGroup {
   title: string;
@@ -17,6 +18,7 @@ interface FollowUpGroup {
 type EditingContact = Contact | ContactInput;
 
 export default function FollowUpsPage() {
+  const { isManager } = useAuth();
   const { contacts, loading, error } = useContacts();
   const [editingContact, setEditingContact] = useState<EditingContact | null>(null);
   const [replyContact, setReplyContact] = useState<Contact | null>(null);
@@ -87,6 +89,7 @@ export default function FollowUpsPage() {
             onLogReply={setReplyContact}
             onEdit={setEditingContact}
             onArchive={handleArchive}
+            canArchive={isManager}
           />
         ))}
       </div>
@@ -107,6 +110,7 @@ interface FollowUpSectionProps {
   onLogReply: (contact: Contact) => void;
   onEdit: (contact: Contact) => void;
   onArchive: (contact: Contact) => void;
+  canArchive: boolean;
 }
 
 function FollowUpSection({
@@ -115,6 +119,7 @@ function FollowUpSection({
   onLogReply,
   onEdit,
   onArchive,
+  canArchive,
 }: FollowUpSectionProps) {
   return (
     <div className="overflow-hidden rounded border border-line bg-white">
@@ -176,9 +181,11 @@ function FollowUpSection({
                     <IconButton label="Edit contact" onClick={() => onEdit(contact)}>
                       <Edit3 size={16} />
                     </IconButton>
-                    <IconButton label="Archive contact" onClick={() => onArchive(contact)}>
-                      <Archive size={16} />
-                    </IconButton>
+                    {canArchive ? (
+                      <IconButton label="Archive contact" onClick={() => onArchive(contact)}>
+                        <Archive size={16} />
+                      </IconButton>
+                    ) : null}
                   </div>
                 </td>
               </tr>
