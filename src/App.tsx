@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import AppLayout from './components/AppLayout';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminResetPage from './pages/AdminResetPage';
 import BrokersPage from './pages/BrokersPage';
 import CampaignPage from './pages/CampaignPage';
 import ContactsPage from './pages/ContactsPage';
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="import" element={<ImportPage />} />
         <Route path="export" element={<ExportPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="admin-reset" element={<AdminResetPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
