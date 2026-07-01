@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import PageHeader from '../components/PageHeader.jsx';
 import { firebaseReady } from '../firebase';
 import {
@@ -110,6 +111,21 @@ export default function SettingsPage() {
 
         {signatureMessage ? <p className="mt-3 text-sm font-medium text-emerald-700">{signatureMessage}</p> : null}
         {signatureError ? <p className="mt-3 text-sm font-medium text-red-700">{signatureError}</p> : null}
+      </div>
+
+      <div className="mt-4 rounded border border-rose/30 bg-white p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-rose">Danger Zone</h2>
+            <p className="mt-1 text-sm text-steel">Permanent data reset tool for handover preparation.</p>
+          </div>
+          <Link
+            to="/admin-reset"
+            className="inline-flex items-center justify-center rounded bg-rose px-4 py-2 text-sm font-semibold text-white hover:bg-rose/90"
+          >
+            Admin Data Reset
+          </Link>
+        </div>
       </div>
     </section>
   );
