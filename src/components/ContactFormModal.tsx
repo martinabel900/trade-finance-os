@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import { type FormEvent, useEffect, useState } from 'react';
+import { useBrokers } from '../hooks/useBrokers';
 import {
   CAMPAIGNS,
   EMAIL_STATUSES,
@@ -14,6 +15,8 @@ import {
   type ContactInput,
 } from '../services/contactService';
 import InitialsBadge from './InitialsBadge';
+import { getUserSignature } from '../utils/userAttribution';
+import { auth } from '../firebase/firebase';
 
 interface ContactFormModalProps {
   contact: Contact | ContactInput;
@@ -40,6 +43,7 @@ function hasContactId(contact: Contact | ContactInput): contact is Contact {
 }
 
 export default function ContactFormModal({ contact, onClose }: ContactFormModalProps) {
+  const { brokers, error: brokersError } = useBrokers();
   const [form, setForm] = useState<Contact | ContactInput>(emptyContact);
   const [activity, setActivity] = useState<ContactActivity[]>([]);
   const [activityError, setActivityError] = useState('');
@@ -94,10 +98,12 @@ export default function ContactFormModal({ contact, onClose }: ContactFormModalP
       };
 
       if (hasContactId(form)) {
-        await updateContact(form.id, payload, {
-          type: 'edited',
-          message: 'Contact details edited.',
-        });
+        await updateContact(form.id, payload, getUpdateActivity(contact, payload));
+        const brokerActivity = getBrokerChangeActivity(contact, payload);
+
+        if (brokerActivity) {
+          await updateContact(form.id, {}, brokerActivity);
+        }
       } else {
         await createContact(payload);
       }
@@ -108,6 +114,33 @@ export default function ContactFormModal({ contact, onClose }: ContactFormModalP
     } finally {
       setSaving(false);
     }
+  }
+
+  function handleBrokerSelect(brokerId: string) {
+    const broker = brokers.find((item) => item.id === brokerId);
+
+    if (!broker) {
+      setForm((current) => ({
+        ...current,
+        brokerId: '',
+        brokerName: '',
+        brokerEmail: '',
+        brokerPhone: '',
+        brokerCcEnabled: false,
+      }));
+      return;
+    }
+
+    setForm((current) => ({
+      ...current,
+      brokerId: broker.id,
+      brokerName: broker.brokerName,
+      brokerEmail: broker.brokerEmail,
+      brokerPhone: broker.brokerPhone,
+      brokerCcEnabled: current.brokerCcEnabled === null || current.brokerCcEnabled === undefined
+        ? broker.ccDefault
+        : current.brokerCcEnabled,
+    }));
   }
 
   function updateField(field: keyof ContactInput, value: string | boolean | null) {
@@ -133,17 +166,6 @@ export default function ContactFormModal({ contact, onClose }: ContactFormModalP
         </div>
 
         <div className="grid gap-4 p-5 sm:grid-cols-2">
-          <Field label="Broker Name" value={form.brokerName} onChange={(value) => updateField('brokerName', value)} />
-          <Field label="Broker Email" value={form.brokerEmail || ''} onChange={(value) => updateField('brokerEmail', value)} />
-          <Field label="Broker Phone" value={form.brokerPhone || ''} onChange={(value) => updateField('brokerPhone', value)} />
-          <label className="flex items-center gap-2 pt-6 text-sm">
-            <input
-              type="checkbox"
-              checked={Boolean(form.brokerCcEnabled)}
-              onChange={(event) => updateField('brokerCcEnabled', event.target.checked)}
-            />
-            CC broker on client emails
-          </label>
           <Field label="Company Name" value={form.companyName} onChange={(value) => updateField('companyName', value)} required />
           <Field label="Contact Name" value={form.contactName} onChange={(value) => updateField('contactName', value)} />
           <Field label="Email" type="email" value={form.email} onChange={(value) => updateField('email', value)} />
@@ -158,6 +180,39 @@ export default function ContactFormModal({ contact, onClose }: ContactFormModalP
             options={RESPONSE_CATEGORIES}
             onChange={(value) => updateField('responseCategory', value)}
           />
+
+          <div className="rounded border border-line bg-paper p-4 sm:col-span-2">
+            <h3 className="text-sm font-semibold">Broker Details</h3>
+            {brokersError ? <p className="mt-2 text-sm text-rose">{brokersError}</p> : null}
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <label>
+                <span className="text-xs font-medium uppercase tracking-wide text-steel">Broker</span>
+                <select
+                  value={form.brokerId || ''}
+                  onChange={(event) => handleBrokerSelect(event.target.value)}
+                  className="focus-ring mt-1 w-full rounded border border-line bg-white px-3 py-2 text-sm"
+                >
+                  <option value="">No broker</option>
+                  {brokers.map((broker) => (
+                    <option key={broker.id} value={broker.id}>
+                      {broker.brokerName || broker.brokerEmail || 'Unnamed Broker'}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex items-center gap-2 pt-6 text-sm">
+                <input
+                  type="checkbox"
+                  checked={Boolean(form.brokerCcEnabled)}
+                  onChange={(event) => updateField('brokerCcEnabled', event.target.checked)}
+                />
+                Broker CC Enabled
+              </label>
+              <ReadOnlyField label="Broker Email" value={form.brokerEmail || '-'} />
+              <ReadOnlyField label="Broker Phone" value={form.brokerPhone || '-'} />
+            </div>
+          </div>
+
           <label className="sm:col-span-2">
             <span className="text-xs font-medium uppercase tracking-wide text-steel">Notes</span>
             <textarea
@@ -218,12 +273,57 @@ export default function ContactFormModal({ contact, onClose }: ContactFormModalP
   );
 }
 
+function getUpdateActivity(original: Contact | ContactInput, payload: ContactInput) {
+  if (hasContactId(original) && brokerChanged(original, payload)) {
+    return undefined;
+  }
+
+  return {
+    type: 'edited',
+    message: 'Contact details edited.',
+  };
+}
+
+function getBrokerChangeActivity(original: Contact | ContactInput, payload: ContactInput) {
+  if (!hasContactId(original) || !brokerChanged(original, payload)) {
+    return undefined;
+  }
+
+  const actor = getUserSignature(auth.currentUser);
+  const oldBroker = original.brokerName || 'No broker';
+  const newBroker = payload.brokerName || 'No broker';
+
+  return {
+    type: 'broker_changed',
+    message: payload.brokerName
+      ? `Broker changed by ${actor.initials}: ${oldBroker} -> ${newBroker}`
+      : `Broker removed by ${actor.initials}`,
+  };
+}
+
+function brokerChanged(original: Contact, payload: ContactInput): boolean {
+  return (
+    (original.brokerId || '') !== (payload.brokerId || '') ||
+    (original.brokerName || '') !== (payload.brokerName || '') ||
+    (original.brokerEmail || '') !== (payload.brokerEmail || '')
+  );
+}
+
 function formatActivityDate(createdAt: ContactActivity['createdAt']): string {
   if (!createdAt) {
     return 'Just now';
   }
 
   return createdAt.toDate().toLocaleString();
+}
+
+function ReadOnlyField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <span className="text-xs font-medium uppercase tracking-wide text-steel">{label}</span>
+      <p className="mt-1 min-h-10 rounded border border-line bg-white px-3 py-2 text-sm text-ink">{value}</p>
+    </div>
+  );
 }
 
 function Field({ label, value, onChange, type = 'text', required = false }: FieldProps) {

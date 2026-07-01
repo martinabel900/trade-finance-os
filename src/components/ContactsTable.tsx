@@ -298,6 +298,7 @@ export default function ContactsTable({ contacts, fixedCampaign }: ContactsTable
             <thead className="bg-paper">
               <tr className="text-left text-xs font-semibold uppercase tracking-wide text-steel">
                 <th className="px-3 py-3">Company</th>
+                <th className="px-3 py-3">Broker</th>
                 <th className="px-3 py-3">Contact</th>
                 <th className="px-3 py-3">Phone</th>
                 <th className="px-3 py-3 whitespace-nowrap">Campaign</th>
@@ -316,7 +317,17 @@ export default function ContactsTable({ contacts, fixedCampaign }: ContactsTable
                 <tr key={contact.id} className="align-top">
                   <td className="min-w-[190px] px-3 py-3">
                     <p className="font-medium text-ink">{contact.companyName || 'Untitled Company'}</p>
-                    <p className="text-xs text-steel">{contact.brokerName}</p>
+                  </td>
+                  <td className="min-w-[170px] px-3 py-3">
+                    {contact.brokerName ? (
+                      <>
+                        <p className="font-medium text-ink">{contact.brokerName}</p>
+                        <p className="text-xs text-steel">{contact.brokerEmail || '-'}</p>
+                        <p className="text-xs text-steel">CC: {contact.brokerCcEnabled ? 'Yes' : 'No'}</p>
+                      </>
+                    ) : (
+                      <p className="text-steel">No broker</p>
+                    )}
                   </td>
                   <td className="min-w-[190px] px-3 py-3">
                     <p>{contact.contactName || '-'}</p>
@@ -397,7 +408,7 @@ export default function ContactsTable({ contacts, fixedCampaign }: ContactsTable
               ))}
               {!visibleContacts.length ? (
                 <tr>
-                  <td colSpan={12} className="px-3 py-10 text-center text-sm text-steel">
+                  <td colSpan={13} className="px-3 py-10 text-center text-sm text-steel">
                     No contacts match the current view.
                   </td>
                 </tr>

@@ -7,6 +7,7 @@ import {
 } from '../services/userSettingsService';
 import type { Contact } from '../services/contactService';
 import type { EmailQueueTemplate } from '../services/emailQueueService';
+import { isValidEmail } from '../utils/emailValidation';
 
 interface EmailPreviewModalProps {
   contacts: Contact[];
@@ -36,9 +37,10 @@ export default function EmailPreviewModal({
   const [signature, setSignature] = useState(DEFAULT_EMAIL_SIGNATURE);
   const [settingsError, setSettingsError] = useState('');
   const ccRecipients = contacts
-    .map((contact) => (contact.brokerCcEnabled && contact.brokerEmail ? contact.brokerEmail : ''))
+    .map((contact) => (contact.brokerCcEnabled && isValidEmail(contact.brokerEmail) ? contact.brokerEmail : ''))
     .filter(Boolean);
   const uniqueCcRecipients = [...new Set(ccRecipients)];
+  const toLabel = contacts.length === 1 ? contacts[0].email : `${contacts.length} client recipients`;
 
   useEffect(() => {
     setSubject(preview?.subject ?? '');
@@ -96,9 +98,10 @@ export default function EmailPreviewModal({
               <div className="rounded border border-line bg-paper p-4">
                 <p className="text-xs font-medium uppercase tracking-wide text-steel">From</p>
                 <p className="mt-1 text-sm">Trade Finance Company International &lt;martin@tfciglobal.com&gt;</p>
-                {uniqueCcRecipients.length ? (
-                  <p className="mt-2 text-sm text-steel">CC broker: {uniqueCcRecipients.join(', ')}</p>
-                ) : null}
+                <p className="mt-2 text-sm text-steel">To: {toLabel}</p>
+                <p className="mt-1 text-sm text-steel">
+                  CC Broker: {uniqueCcRecipients.length ? uniqueCcRecipients.join(', ') : 'No'}
+                </p>
               </div>
               <div className="rounded border border-line bg-paper p-4">
                 <label htmlFor="email-subject" className="text-xs font-medium uppercase tracking-wide text-steel">
