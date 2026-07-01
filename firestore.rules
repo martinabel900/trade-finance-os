@@ -18,6 +18,10 @@ service cloud.firestore {
       allow read, create, update, delete: if signedIn();
     }
 
+    match /brokers/{brokerId} {
+      allow read, create, update, delete: if signedIn();
+    }
+
     match /userSettings/{userId} {
       allow read, create, update, delete: if signedIn() && request.auth.uid == userId;
     }

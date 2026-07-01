@@ -1,8 +1,11 @@
 import { Upload } from 'lucide-react';
 import { type ChangeEvent, useState } from 'react';
 import PageHeader from '../components/PageHeader.jsx';
+import { useBrokers } from '../hooks/useBrokers';
 import { useContacts } from '../hooks/useContacts';
 import { createContact, type Contact } from '../services/contactService';
+import { createBroker, emptyBroker, type Broker, type BrokerInput } from '../services/brokerService';
+import { hasMissingClientEmail } from '../utils/emailValidation';
 import {
   parseContactFile,
   type ContactImportPreview,
@@ -16,6 +19,7 @@ interface DuplicateContactRow extends ImportContactRow {
 
 export default function ImportPage() {
   const { contacts, error: contactsError } = useContacts();
+  const { brokers, error: brokersError } = useBrokers();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ContactImportPreview | null>(null);
   const [duplicateRows, setDuplicateRows] = useState<DuplicateContactRow[]>([]);
@@ -61,6 +65,11 @@ export default function ImportPage() {
       const rowsToImport: ImportContactRow[] = [];
 
       preview.validRows.forEach((row) => {
+        if (hasMissingClientEmail(row.contact.email)) {
+          rowsToImport.push(row);
+          return;
+        }
+
         const key = getContactKey(row.contact.email, row.contact.campaign);
         const matchedContactId = existingKeys.get(key);
 
@@ -72,14 +81,33 @@ export default function ImportPage() {
         }
       });
 
-      await Promise.all(
-        rowsToImport.map((row) =>
-          createContact(row.contact, {
-            type: 'imported',
-            message: 'Contact imported.',
-          }),
-        ),
-      );
+      const brokerCache = buildBrokerCache(brokers);
+
+      for (const row of rowsToImport) {
+        const broker = await findOrCreateBrokerForImport(
+          {
+            brokerName: row.contact.brokerName,
+            brokerEmail: row.contact.brokerEmail,
+            brokerPhone: row.contact.brokerPhone,
+          },
+          brokerCache,
+        );
+        const contact = broker
+          ? {
+              ...row.contact,
+              brokerId: broker.id,
+              brokerName: broker.brokerName,
+              brokerEmail: broker.brokerEmail,
+              brokerPhone: broker.brokerPhone,
+              brokerCcEnabled: row.contact.brokerCcEnabled ?? broker.ccDefault,
+            }
+          : row.contact;
+
+        await createContact(contact, {
+          type: 'imported',
+          message: 'Contact imported.',
+        });
+      }
       setDuplicateRows(duplicates);
       setMessage(`${rowsToImport.length} contacts imported. ${duplicates.length} duplicate rows skipped.`);
       setPreview({ validRows: [], invalidRows: preview.invalidRows });
@@ -114,7 +142,7 @@ export default function ImportPage() {
 
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-steel">
-            Expected columns: Broker Name, Company, Contact Name, Email Address, Campaign.
+            Expected columns: Broker Name, Broker Email, Broker Phone, Company, Contact Name, Email Address, Campaign.
           </p>
           <button
             type="button"
@@ -129,6 +157,7 @@ export default function ImportPage() {
         {message ? <p className="mt-4 rounded border border-mint/30 bg-mint/10 p-3 text-sm text-mint">{message}</p> : null}
         {error ? <p className="mt-4 rounded border border-rose/30 bg-rose/10 p-3 text-sm text-rose">{error}</p> : null}
         {contactsError ? <p className="mt-4 rounded border border-rose/30 bg-rose/10 p-3 text-sm text-rose">{contactsError}</p> : null}
+        {brokersError ? <p className="mt-4 rounded border border-rose/30 bg-rose/10 p-3 text-sm text-rose">{brokersError}</p> : null}
       </div>
 
       {preview || duplicateRows.length ? (
@@ -151,6 +180,65 @@ function getExistingContactKeys(contacts: Contact[]): Map<string, string> {
 
 function getContactKey(email: string, campaign: string): string {
   return `${email.trim().toLowerCase()}::${campaign.trim().toUpperCase()}`;
+}
+
+interface BrokerCache {
+  byName: Map<string, Broker>;
+  byEmail: Map<string, Broker>;
+}
+
+function buildBrokerCache(brokers: Broker[]): BrokerCache {
+  const cache: BrokerCache = {
+    byName: new Map(),
+    byEmail: new Map(),
+  };
+
+  brokers.forEach((broker) => cacheBroker(cache, broker));
+  return cache;
+}
+
+async function findOrCreateBrokerForImport(
+  input: Pick<BrokerInput, 'brokerName' | 'brokerEmail' | 'brokerPhone'>,
+  cache: BrokerCache,
+): Promise<Broker | null> {
+  const nameKey = normalizeBrokerKey(input.brokerName);
+  const emailKey = normalizeBrokerKey(input.brokerEmail);
+  const existing = (emailKey ? cache.byEmail.get(emailKey) : undefined) ||
+    (nameKey ? cache.byName.get(nameKey) : undefined);
+
+  if (existing) {
+    return existing;
+  }
+
+  if (!input.brokerName && !input.brokerEmail) {
+    return null;
+  }
+
+  const brokerInput = {
+    ...emptyBroker,
+    brokerName: input.brokerName,
+    brokerEmail: input.brokerEmail,
+    brokerPhone: input.brokerPhone,
+  };
+  const broker: Broker = {
+    ...brokerInput,
+    id: await createBroker(brokerInput),
+  };
+
+  cacheBroker(cache, broker);
+  return broker;
+}
+
+function cacheBroker(cache: BrokerCache, broker: Broker): void {
+  const nameKey = normalizeBrokerKey(broker.brokerName);
+  const emailKey = normalizeBrokerKey(broker.brokerEmail);
+
+  if (nameKey) cache.byName.set(nameKey, broker);
+  if (emailKey) cache.byEmail.set(emailKey, broker);
+}
+
+function normalizeBrokerKey(value: string): string {
+  return value.trim().toLowerCase();
 }
 
 function PreviewTable({ rows }: { rows: ImportContactRow[] }) {

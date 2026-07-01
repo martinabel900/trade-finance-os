@@ -77,6 +77,10 @@ export default function ContactFormModal({ contact, onClose }: ContactFormModalP
     try {
       const payload: ContactInput = {
         brokerName: form.brokerName,
+        brokerId: form.brokerId,
+        brokerEmail: form.brokerEmail,
+        brokerPhone: form.brokerPhone,
+        brokerCcEnabled: form.brokerCcEnabled,
         companyName: form.companyName,
         contactName: form.contactName,
         email: form.email,
@@ -106,7 +110,7 @@ export default function ContactFormModal({ contact, onClose }: ContactFormModalP
     }
   }
 
-  function updateField(field: keyof ContactInput, value: string) {
+  function updateField(field: keyof ContactInput, value: string | boolean | null) {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
@@ -130,6 +134,16 @@ export default function ContactFormModal({ contact, onClose }: ContactFormModalP
 
         <div className="grid gap-4 p-5 sm:grid-cols-2">
           <Field label="Broker Name" value={form.brokerName} onChange={(value) => updateField('brokerName', value)} />
+          <Field label="Broker Email" value={form.brokerEmail || ''} onChange={(value) => updateField('brokerEmail', value)} />
+          <Field label="Broker Phone" value={form.brokerPhone || ''} onChange={(value) => updateField('brokerPhone', value)} />
+          <label className="flex items-center gap-2 pt-6 text-sm">
+            <input
+              type="checkbox"
+              checked={Boolean(form.brokerCcEnabled)}
+              onChange={(event) => updateField('brokerCcEnabled', event.target.checked)}
+            />
+            CC broker on client emails
+          </label>
           <Field label="Company Name" value={form.companyName} onChange={(value) => updateField('companyName', value)} required />
           <Field label="Contact Name" value={form.contactName} onChange={(value) => updateField('contactName', value)} />
           <Field label="Email" type="email" value={form.email} onChange={(value) => updateField('email', value)} />

@@ -16,6 +16,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { app, auth, db } from '../firebase/firebase';
 import type { Contact } from './contactService';
 import { getAttributionFields } from '../utils/userAttribution';
+import { isValidEmail } from '../utils/emailValidation';
 
 export const EMAIL_QUEUE_COLLECTION = 'emailQueue';
 export const EMAIL_QUEUE_STATUSES = ['Pending', 'Sending', 'Sent', 'Failed', 'Cancelled'] as const;
@@ -33,6 +34,9 @@ export interface EmailQueueItem {
   recipientEmail: string;
   recipientName: string;
   companyName: string;
+  ccEmail?: string;
+  brokerId?: string;
+  brokerName?: string;
   status: EmailQueueStatus;
   attempts: number;
   lastAttemptAt?: Timestamp | null;
@@ -68,6 +72,9 @@ interface EmailQueueInput {
   recipientEmail: string;
   recipientName: string;
   companyName: string;
+  ccEmail?: string;
+  brokerId?: string;
+  brokerName?: string;
 }
 
 export interface EmailQueueTemplate {
@@ -89,10 +96,17 @@ export function contactToEmailQueueInput(contact: Contact, template: EmailQueueT
     recipientEmail: contact.email,
     recipientName: contact.contactName,
     companyName: contact.companyName,
+    ccEmail: contact.brokerCcEnabled && isValidEmail(contact.brokerEmail) ? contact.brokerEmail : '',
+    brokerId: contact.brokerId ?? '',
+    brokerName: contact.brokerName ?? '',
   };
 }
 
 export async function enqueueCampaignEmail(contact: Contact, template: EmailQueueTemplate): Promise<string> {
+  if (!isValidEmail(contact.email)) {
+    throw new Error('Client email is missing or invalid.');
+  }
+
   const docRef = await addDoc(queueRef, {
     ...contactToEmailQueueInput(contact, template),
     status: 'Pending',
@@ -111,6 +125,42 @@ export async function enqueueCampaignEmail(contact: Contact, template: EmailQueu
 
 export async function enqueueCampaignBatch(contacts: Contact[], template: EmailQueueTemplate): Promise<void> {
   await Promise.all(contacts.map((contact) => enqueueCampaignEmail(contact, template)));
+}
+
+export async function enqueueBrokerMissingEmailRequest(contact: Contact): Promise<string> {
+  if (!isValidEmail(contact.brokerEmail)) {
+    throw new Error('Broker email is missing or invalid.');
+  }
+
+  const docRef = await addDoc(queueRef, {
+    contactId: contact.id,
+    campaign: contact.campaign,
+    template: 'BrokerMissingEmailRequest',
+    subject: 'Missing Client Contact Details',
+    body: buildBrokerMissingEmailBody(contact),
+    signature: [
+      'Martin Abel',
+      'Country Manager - Thailand',
+      'Trade Finance Company International',
+    ].join('\n'),
+    recipientEmail: contact.brokerEmail,
+    recipientName: contact.brokerName,
+    companyName: contact.companyName,
+    ccEmail: '',
+    brokerId: contact.brokerId ?? '',
+    brokerName: contact.brokerName ?? '',
+    status: 'Pending',
+    attempts: 0,
+    lastAttemptAt: null,
+    lastError: '',
+    queuedAt: serverTimestamp(),
+    sentAt: null,
+    createdBy: getCurrentActor(),
+    ...getAttributionFields('createdBy', auth.currentUser),
+    ...getAttributionFields('updatedBy', auth.currentUser),
+  });
+
+  return docRef.id;
 }
 
 export function subscribeToEmailQueue(
@@ -170,6 +220,9 @@ function emailQueueFromSnapshot(snapshot: QueryDocumentSnapshot): EmailQueueItem
     recipientEmail: String(data.recipientEmail ?? ''),
     recipientName: String(data.recipientName ?? ''),
     companyName: String(data.companyName ?? ''),
+    ccEmail: String(data.ccEmail ?? ''),
+    brokerId: String(data.brokerId ?? ''),
+    brokerName: String(data.brokerName ?? ''),
     status: normalizeStatus(data.status),
     attempts: Number(data.attempts ?? 0),
     lastAttemptAt: data.lastAttemptAt ?? null,
@@ -196,4 +249,26 @@ function normalizeStatus(status: unknown): EmailQueueStatus {
 
 function getCurrentActor(): string {
   return auth.currentUser?.email || auth.currentUser?.uid || 'Unknown user';
+}
+
+function buildBrokerMissingEmailBody(contact: Contact): string {
+  return [
+    `Dear ${contact.brokerName || 'Broker'},`,
+    '',
+    'I hope you are well.',
+    '',
+    'We are currently reviewing several trade finance transactions that were introduced earlier this year.',
+    '',
+    `For the transaction involving ${contact.companyName}, we do not appear to have a valid client email address on file.`,
+    '',
+    'Could you please confirm the correct email address and current contact person so we can follow up and check whether the transaction is still active?',
+    '',
+    `Client / Company: ${contact.companyName}`,
+    `Contact Name: ${contact.contactName || '-'}`,
+    `Campaign: ${contact.campaign}`,
+    '',
+    'Thank you in advance.',
+    '',
+    'Kind regards,',
+  ].join('\n');
 }

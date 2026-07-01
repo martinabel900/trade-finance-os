@@ -7,6 +7,7 @@ import { useContacts } from '../hooks/useContacts';
 import type { Contact } from '../services/contactService';
 import { enqueueCampaignBatch } from '../services/emailQueueService';
 import type { EmailQueueTemplate } from '../services/emailQueueService';
+import { isValidEmail } from '../utils/emailValidation';
 
 interface CampaignPageProps {
   campaign: 'A' | 'B' | 'C';
@@ -18,7 +19,7 @@ export default function CampaignPage({ campaign }: CampaignPageProps) {
   const [sendingBatch, setSendingBatch] = useState(false);
   const [sendError, setSendError] = useState('');
   const campaignContacts = contacts.filter((contact) => contact.campaign === campaign);
-  const sendableContacts = campaignContacts.filter((contact) => contact.email);
+  const sendableContacts = campaignContacts.filter((contact) => isValidEmail(contact.email));
 
   async function handleConfirmSendBatch(template: EmailQueueTemplate) {
     if (!batchPreviewContacts.length) {

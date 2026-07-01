@@ -4,10 +4,13 @@ import {
   type Campaign,
   type ContactInput,
 } from '../services/contactService';
+import { hasMissingClientEmail } from './emailValidation';
 
 export interface ParsedContactRow {
   rowNumber: number;
   brokerName: string;
+  brokerEmail: string;
+  brokerPhone: string;
   companyName: string;
   contactName: string;
   email: string;
@@ -35,12 +38,13 @@ const REQUIRED_COLUMN_GROUPS = [
   { label: 'Broker Name', aliases: ['broker name', 'broker'] },
   { label: 'Company', aliases: ['company', 'company name'] },
   { label: 'Contact Name', aliases: ['contact name', 'name', 'contact'] },
-  { label: 'Email Address', aliases: ['email address', 'email', 'e-mail'] },
   { label: 'Campaign', aliases: ['campaign'] },
 ] as const;
 
 const COLUMN_ALIASES = {
   brokerName: ['broker name', 'broker'],
+  brokerEmail: ['broker email', 'broker e-mail'],
+  brokerPhone: ['broker phone', 'broker telephone', 'broker mobile'],
   companyName: ['company', 'company name'],
   contactName: ['contact name', 'name', 'contact'],
   email: ['email address', 'email', 'e-mail'],
@@ -131,6 +135,8 @@ function parseRow(row: SheetRow, headerMap: Map<string, number>, rowNumber: numb
   return {
     rowNumber,
     brokerName: getValue(row, headerMap, COLUMN_ALIASES.brokerName),
+    brokerEmail: getValue(row, headerMap, COLUMN_ALIASES.brokerEmail),
+    brokerPhone: getValue(row, headerMap, COLUMN_ALIASES.brokerPhone),
     companyName: getValue(row, headerMap, COLUMN_ALIASES.companyName),
     contactName: getValue(row, headerMap, COLUMN_ALIASES.contactName),
     email: getValue(row, headerMap, COLUMN_ALIASES.email),
@@ -159,10 +165,6 @@ function validateRow(row: ParsedContactRow): string[] {
     errors.push('Company is required.');
   }
 
-  if (!row.email) {
-    errors.push('Email Address is required.');
-  }
-
   if (!CAMPAIGNS.includes(row.campaign as Campaign)) {
     errors.push('Campaign must be A, B, or C.');
   }
@@ -181,17 +183,21 @@ function assignBatches(rows: ParsedContactRow[]): ImportContactRow[] {
       rowNumber: row.rowNumber,
       contact: {
         brokerName: row.brokerName,
+        brokerEmail: row.brokerEmail,
+        brokerPhone: row.brokerPhone,
+        brokerCcEnabled: null,
         companyName: row.companyName,
         contactName: row.contactName,
-        email: row.email,
+        email: hasMissingClientEmail(row.email) ? '' : row.email,
         phone: '',
         campaign: row.campaign,
         batch: String(Math.floor(currentCount / 10) + 1),
         emailStatus: 'Not Sent',
+        contactEmailStatus: hasMissingClientEmail(row.email) ? 'Missing Email' : '',
         replyStatus: 'No Reply',
         responseCategory: 'No reply',
         notes: '',
-        nextAction: '',
+        nextAction: hasMissingClientEmail(row.email) ? 'Ask broker for client email' : '',
         dealStatus: 'No Reply',
       },
     };

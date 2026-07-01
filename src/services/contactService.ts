@@ -54,6 +54,10 @@ export type DealStatus = (typeof DEAL_STATUSES)[number];
 export interface Contact {
   id: string;
   brokerName: string;
+  brokerId?: string;
+  brokerEmail?: string;
+  brokerPhone?: string;
+  brokerCcEnabled?: boolean | null;
   companyName: string;
   contactName: string;
   email: string;
@@ -61,6 +65,7 @@ export interface Contact {
   campaign: string;
   batch: string;
   emailStatus: string;
+  contactEmailStatus?: string;
   replyStatus: string;
   responseCategory: string;
   notes: string;
@@ -155,6 +160,10 @@ export interface ContactActivityInput {
 
 export const emptyContact: ContactInput = {
   brokerName: '',
+  brokerId: '',
+  brokerEmail: '',
+  brokerPhone: '',
+  brokerCcEnabled: null,
   companyName: '',
   contactName: '',
   email: '',
@@ -190,6 +199,10 @@ function contactFromSnapshot(snapshot: QueryDocumentSnapshot<DocumentData>): Con
   return {
     id: snapshot.id,
     brokerName: String(data.brokerName ?? ''),
+    brokerId: String(data.brokerId ?? ''),
+    brokerEmail: String(data.brokerEmail ?? ''),
+    brokerPhone: String(data.brokerPhone ?? ''),
+    brokerCcEnabled: data.brokerCcEnabled ?? null,
     companyName: String(data.companyName ?? ''),
     contactName: String(data.contactName ?? ''),
     email: String(data.email ?? ''),
@@ -197,6 +210,7 @@ function contactFromSnapshot(snapshot: QueryDocumentSnapshot<DocumentData>): Con
     campaign: String(data.campaign ?? ''),
     batch: String(data.batch ?? data.batchNumber ?? ''),
     emailStatus: String(data.emailStatus ?? ''),
+    contactEmailStatus: String(data.contactEmailStatus ?? ''),
     replyStatus: String(data.replyStatus ?? (legacyReplied ? 'Replied' : 'No Reply')),
     responseCategory: String(data.responseCategory ?? ''),
     notes: String(data.notes ?? ''),
@@ -251,6 +265,10 @@ function getCurrentActor(): string {
 function cleanContact(contact: ContactInput): ContactInput {
   return {
     brokerName: contact.brokerName.trim(),
+    brokerId: contact.brokerId?.trim() ?? '',
+    brokerEmail: contact.brokerEmail?.trim() ?? '',
+    brokerPhone: contact.brokerPhone?.trim() ?? '',
+    brokerCcEnabled: contact.brokerCcEnabled ?? null,
     companyName: contact.companyName.trim(),
     contactName: contact.contactName.trim(),
     email: contact.email.trim(),
@@ -260,6 +278,7 @@ function cleanContact(contact: ContactInput): ContactInput {
     emailStatus: EMAIL_STATUSES.includes(contact.emailStatus as EmailStatus)
       ? contact.emailStatus
       : 'Not Sent',
+    contactEmailStatus: contact.contactEmailStatus?.trim() ?? '',
     replyStatus: REPLY_STATUSES.includes(contact.replyStatus as ReplyStatus)
       ? contact.replyStatus
       : 'No Reply',
@@ -277,6 +296,10 @@ function cleanContactUpdate(updates: ContactUpdate): ContactUpdate {
   const payload: ContactUpdate = {};
 
   if (updates.brokerName !== undefined) payload.brokerName = updates.brokerName.trim();
+  if (updates.brokerId !== undefined) payload.brokerId = updates.brokerId.trim();
+  if (updates.brokerEmail !== undefined) payload.brokerEmail = updates.brokerEmail.trim();
+  if (updates.brokerPhone !== undefined) payload.brokerPhone = updates.brokerPhone.trim();
+  if (updates.brokerCcEnabled !== undefined) payload.brokerCcEnabled = updates.brokerCcEnabled;
   if (updates.companyName !== undefined) payload.companyName = updates.companyName.trim();
   if (updates.contactName !== undefined) payload.contactName = updates.contactName.trim();
   if (updates.email !== undefined) payload.email = updates.email.trim();
@@ -290,6 +313,7 @@ function cleanContactUpdate(updates: ContactUpdate): ContactUpdate {
       ? updates.emailStatus
       : 'Not Sent';
   }
+  if (updates.contactEmailStatus !== undefined) payload.contactEmailStatus = updates.contactEmailStatus.trim();
   if (updates.replyStatus !== undefined) {
     payload.replyStatus = REPLY_STATUSES.includes(updates.replyStatus as ReplyStatus)
       ? updates.replyStatus

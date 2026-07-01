@@ -9,6 +9,8 @@ export interface CampaignEmailInput {
   subject?: string;
   body?: string;
   signature?: string;
+  cc?: string;
+  template?: string;
 }
 
 interface RenderedEmailTemplate {
@@ -32,6 +34,7 @@ export async function sendSmtpCampaignEmail(input: CampaignEmailInput): Promise<
   const replyTo = getRequiredEnv('SMTP_REPLY_TO');
   const testMode = isEmailTestMode();
   const recipient = testMode ? 'martin@tfciglobal.com' : input.to;
+  const cc = testMode ? undefined : input.cc?.trim() || undefined;
   const outboundTemplate = testMode ? withTestModeHeader(template, input) : template;
 
   console.log(`EMAIL_TEST_MODE is ${testMode ? 'ON' : 'OFF'}. Sending campaign email to ${recipient}.`);
@@ -50,6 +53,7 @@ export async function sendSmtpCampaignEmail(input: CampaignEmailInput): Promise<
     from: `"${fromName}" <${fromEmail}>`,
     replyTo,
     to: recipient,
+    cc,
     subject: template.subject,
     text: outboundTemplate.text,
     html: outboundTemplate.html,

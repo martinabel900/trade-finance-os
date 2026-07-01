@@ -35,6 +35,10 @@ export default function EmailPreviewModal({
   const [body, setBody] = useState('');
   const [signature, setSignature] = useState(DEFAULT_EMAIL_SIGNATURE);
   const [settingsError, setSettingsError] = useState('');
+  const ccRecipients = contacts
+    .map((contact) => (contact.brokerCcEnabled && contact.brokerEmail ? contact.brokerEmail : ''))
+    .filter(Boolean);
+  const uniqueCcRecipients = [...new Set(ccRecipients)];
 
   useEffect(() => {
     setSubject(preview?.subject ?? '');
@@ -92,6 +96,9 @@ export default function EmailPreviewModal({
               <div className="rounded border border-line bg-paper p-4">
                 <p className="text-xs font-medium uppercase tracking-wide text-steel">From</p>
                 <p className="mt-1 text-sm">Trade Finance Company International &lt;martin@tfciglobal.com&gt;</p>
+                {uniqueCcRecipients.length ? (
+                  <p className="mt-2 text-sm text-steel">CC broker: {uniqueCcRecipients.join(', ')}</p>
+                ) : null}
               </div>
               <div className="rounded border border-line bg-paper p-4">
                 <label htmlFor="email-subject" className="text-xs font-medium uppercase tracking-wide text-steel">

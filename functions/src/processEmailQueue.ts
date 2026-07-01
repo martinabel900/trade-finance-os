@@ -11,6 +11,9 @@ interface EmailQueueRecord {
   recipientEmail: string;
   recipientName: string;
   companyName: string;
+  ccEmail?: string;
+  brokerId?: string;
+  brokerName?: string;
   subject?: string;
   body?: string;
   signature?: string;
@@ -104,6 +107,8 @@ async function processQueueDocument(
       subject: claimedData.subject,
       body: claimedData.body,
       signature: claimedData.signature,
+      cc: claimedData.ccEmail,
+      template: claimedData.template,
     });
 
     const contactRef = db.collection('contacts').doc(claimedData.contactId);
@@ -116,16 +121,26 @@ async function processQueueDocument(
         lastError: '',
         ...getAttributionFields('updatedBy', actor),
       });
-      transaction.update(contactRef, {
-        emailStatus: 'Sent',
-        emailSentAt: FieldValue.serverTimestamp(),
-        sentTemplate: claimedData.campaign,
-        updatedAt: FieldValue.serverTimestamp(),
-        ...getAttributionFields('updatedBy', actor),
-      });
+      if (claimedData.template === 'BrokerMissingEmailRequest') {
+        transaction.update(contactRef, {
+          nextAction: 'Broker contacted for client email',
+          updatedAt: FieldValue.serverTimestamp(),
+          ...getAttributionFields('updatedBy', actor),
+        });
+      } else {
+        transaction.update(contactRef, {
+          emailStatus: 'Sent',
+          emailSentAt: FieldValue.serverTimestamp(),
+          sentTemplate: claimedData.campaign,
+          updatedAt: FieldValue.serverTimestamp(),
+          ...getAttributionFields('updatedBy', actor),
+        });
+      }
       transaction.set(activityRef, {
-        type: 'campaign_email_sent',
-        message: `Campaign ${claimedData.campaign} email sent from queue.`,
+        type: claimedData.template === 'BrokerMissingEmailRequest' ? 'broker_missing_email_request_sent' : 'campaign_email_sent',
+        message: claimedData.template === 'BrokerMissingEmailRequest'
+          ? 'Broker missing email request sent from queue.'
+          : `Campaign ${claimedData.campaign} email sent from queue.`,
         createdAt: FieldValue.serverTimestamp(),
         createdBy: actor.displayName || claimedData.createdBy || 'System',
         ...getActivityAttributionFields(actor),

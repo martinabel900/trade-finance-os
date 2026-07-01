@@ -3,7 +3,9 @@ import type { LucideIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import PageHeader from '../components/PageHeader.jsx';
 import { useContacts } from '../hooks/useContacts';
+import { useBrokers } from '../hooks/useBrokers';
 import { useEmailQueue } from '../hooks/useEmailQueue';
+import { hasMissingClientEmail, isValidEmail } from '../utils/emailValidation';
 
 interface MetricCardProps {
   label: string;
@@ -14,6 +16,7 @@ interface MetricCardProps {
 
 export default function DashboardPage() {
   const { contacts, loading, error } = useContacts();
+  const { brokers, loading: brokersLoading, error: brokersError } = useBrokers();
   const { items: queueItems, loading: queueLoading, error: queueError } = useEmailQueue();
   const total = contacts.length;
   const campaignA = contacts.filter((contact) => contact.campaign === 'A').length;
@@ -33,6 +36,11 @@ export default function DashboardPage() {
   const pendingEmails = queueItems.filter((item) => item.status === 'Pending' || item.status === 'Sending').length;
   const sentQueueEmails = queueItems.filter((item) => item.status === 'Sent').length;
   const failedEmails = queueItems.filter((item) => item.status === 'Failed').length;
+  const missingEmailContacts = contacts.filter((contact) => contact.dealStatus !== 'Archived' && (contact.contactEmailStatus === 'Missing Email' || hasMissingClientEmail(contact.email)));
+  const missingWithBrokerEmail = missingEmailContacts.filter((contact) => isValidEmail(contact.brokerEmail)).length;
+  const missingWithoutBrokerEmail = missingEmailContacts.length - missingWithBrokerEmail;
+  const brokerRequestsQueued = queueItems.filter((item) => item.template === 'BrokerMissingEmailRequest' && item.status === 'Pending').length;
+  const brokerRequestsSent = queueItems.filter((item) => item.template === 'BrokerMissingEmailRequest' && item.status === 'Sent').length;
 
   const primaryMetrics = [
     { label: 'Total Contacts', value: total, icon: Users },
@@ -50,6 +58,13 @@ export default function DashboardPage() {
     { label: 'Pending Emails', value: pendingEmails, icon: Send, loading: queueLoading },
     { label: 'Sent Queue Emails', value: sentQueueEmails, icon: MailCheck, loading: queueLoading },
     { label: 'Failed Emails', value: failedEmails, icon: AlertCircle, loading: queueLoading },
+    { label: 'Total Brokers', value: brokers.length, icon: Users, loading: brokersLoading },
+    { label: 'Active Brokers', value: brokers.filter((broker) => broker.status === 'Active').length, icon: Users, loading: brokersLoading },
+    { label: 'Contacts Missing Email', value: missingEmailContacts.length, icon: Mail, loading },
+    { label: 'Missing Emails With Broker Email', value: missingWithBrokerEmail, icon: MailCheck, loading },
+    { label: 'Missing Emails Without Broker Email', value: missingWithoutBrokerEmail, icon: AlertCircle, loading },
+    { label: 'Broker Requests Queued', value: brokerRequestsQueued, icon: Send, loading: queueLoading },
+    { label: 'Broker Requests Sent', value: brokerRequestsSent, icon: MailCheck, loading: queueLoading },
   ];
 
   const campaignMetrics = [
@@ -75,6 +90,7 @@ export default function DashboardPage() {
       />
 
       {error ? <p className="mb-4 rounded border border-rose/30 bg-rose/10 p-3 text-sm text-rose">{error}</p> : null}
+      {brokersError ? <p className="mb-4 rounded border border-rose/30 bg-rose/10 p-3 text-sm text-rose">{brokersError}</p> : null}
       {queueError ? <p className="mb-4 rounded border border-rose/30 bg-rose/10 p-3 text-sm text-rose">{queueError}</p> : null}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

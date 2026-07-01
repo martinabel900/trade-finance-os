@@ -1,7 +1,9 @@
 import { Download } from 'lucide-react';
 import PageHeader from '../components/PageHeader.jsx';
 import { useContacts } from '../hooks/useContacts';
+import { useBrokers } from '../hooks/useBrokers';
 import { useEmailQueue } from '../hooks/useEmailQueue';
+import { hasMissingClientEmail } from '../utils/emailValidation';
 import { downloadCsv, downloadJson, todayStamp } from '../utils/exportData';
 
 const contactCsvHeaders = [
@@ -50,11 +52,31 @@ const emailQueueCsvHeaders = [
   'updatedByInitials',
 ];
 
+const brokerCsvHeaders = [
+  'brokerName',
+  'brokerCompany',
+  'brokerEmail',
+  'brokerPhone',
+  'brokerWhatsApp',
+  'country',
+  'status',
+  'ccDefault',
+  'notes',
+  'createdAt',
+  'updatedAt',
+  'createdByName',
+  'createdByInitials',
+  'updatedByName',
+  'updatedByInitials',
+];
+
 export default function ExportPage() {
   const { contacts, loading: contactsLoading, error: contactsError } = useContacts();
+  const { brokers, loading: brokersLoading, error: brokersError } = useBrokers();
   const { items: emailQueue, loading: queueLoading, error: queueError } = useEmailQueue();
-  const loading = contactsLoading || queueLoading;
+  const loading = contactsLoading || queueLoading || brokersLoading;
   const archivedContacts = contacts.filter((contact) => contact.dealStatus === 'Archived');
+  const missingEmailContacts = contacts.filter((contact) => contact.contactEmailStatus === 'Missing Email' || hasMissingClientEmail(contact.email));
 
   function handleExportContactsCsv() {
     downloadCsv(`trade-finance-os-contacts-${todayStamp()}.csv`, contacts, contactCsvHeaders);
@@ -68,9 +90,18 @@ export default function ExportPage() {
     downloadCsv(`trade-finance-os-archived-contacts-${todayStamp()}.csv`, archivedContacts, contactCsvHeaders);
   }
 
+  function handleExportBrokersCsv() {
+    downloadCsv(`trade-finance-os-brokers-${todayStamp()}.csv`, brokers, brokerCsvHeaders);
+  }
+
+  function handleExportMissingEmailsCsv() {
+    downloadCsv(`trade-finance-os-missing-emails-${todayStamp()}.csv`, missingEmailContacts, contactCsvHeaders);
+  }
+
   function handleExportFullBackupJson() {
     downloadJson(`trade-finance-os-backup-${todayStamp()}.json`, {
       contacts,
+      brokers,
       emailQueue,
     });
   }
@@ -84,6 +115,9 @@ export default function ExportPage() {
       ) : null}
       {queueError ? (
         <p className="mb-4 rounded border border-rose/30 bg-rose/10 p-3 text-sm text-rose">{queueError}</p>
+      ) : null}
+      {brokersError ? (
+        <p className="mb-4 rounded border border-rose/30 bg-rose/10 p-3 text-sm text-rose">{brokersError}</p>
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -103,10 +137,27 @@ export default function ExportPage() {
         />
         <ExportCard
           title="Full Backup JSON"
-          detail="Contacts and email queue"
+          detail="Contacts, brokers, and email queue"
           buttonLabel="Export Full Backup JSON"
           disabled={loading}
           onClick={handleExportFullBackupJson}
+        />
+      </div>
+
+      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+        <ExportCard
+          title="Brokers CSV"
+          detail={`${brokers.length} brokers`}
+          buttonLabel="Export Brokers CSV"
+          disabled={loading}
+          onClick={handleExportBrokersCsv}
+        />
+        <ExportCard
+          title="Missing Emails CSV"
+          detail={`${missingEmailContacts.length} missing email contacts`}
+          buttonLabel="Export Missing Emails CSV"
+          disabled={loading}
+          onClick={handleExportMissingEmailsCsv}
         />
       </div>
 

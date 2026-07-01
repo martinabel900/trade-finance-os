@@ -21,6 +21,7 @@ import EmailPreviewModal from './EmailPreviewModal';
 import ContactFormModal from './ContactFormModal';
 import InitialsBadge from './InitialsBadge';
 import LogReplyModal from './LogReplyModal';
+import { isValidEmail } from '../utils/emailValidation';
 
 interface ContactsTableProps {
   contacts: Contact[];
@@ -156,7 +157,7 @@ export default function ContactsTable({ contacts, fixedCampaign }: ContactsTable
 
   return (
     <div>
-      <div className="mb-4 grid gap-3 rounded border border-line bg-white p-3 md:grid-cols-2 xl:grid-cols-[minmax(220px,1fr)_repeat(9,minmax(130px,auto))] xl:items-center">
+      <div className="mb-4 grid w-full gap-2 rounded border border-line bg-white p-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-[minmax(240px,1.5fr)_repeat(9,minmax(118px,auto))] 2xl:items-center">
         <label className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-steel" size={16} />
           <input
@@ -280,7 +281,7 @@ export default function ContactsTable({ contacts, fixedCampaign }: ContactsTable
         <button
           type="button"
           onClick={() => setEditingContact({ ...emptyContact, campaign: fixedCampaign || 'A' })}
-          className="flex items-center justify-center gap-2 rounded bg-navy px-4 py-2 text-sm font-semibold text-white"
+          className="flex items-center justify-center gap-2 rounded bg-navy px-3 py-2 text-sm font-semibold text-white"
         >
           <Plus size={16} />
           New Contact
@@ -293,65 +294,67 @@ export default function ContactsTable({ contacts, fixedCampaign }: ContactsTable
 
       <div className="overflow-hidden rounded border border-line bg-white">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-line text-sm">
+          <table className="min-w-full table-auto divide-y divide-line text-sm">
             <thead className="bg-paper">
               <tr className="text-left text-xs font-semibold uppercase tracking-wide text-steel">
-                <th className="px-4 py-3">Company</th>
-                <th className="px-4 py-3">Contact</th>
-                <th className="px-4 py-3">Phone</th>
-                <th className="px-4 py-3">Campaign</th>
-                <th className="px-4 py-3">Batch</th>
-                <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3">Reply</th>
-                <th className="px-4 py-3">Deal</th>
-                <th className="px-4 py-3">Next Action</th>
-                <th className="px-4 py-3">Notes</th>
-                <th className="px-4 py-3">User</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-3 py-3">Company</th>
+                <th className="px-3 py-3">Contact</th>
+                <th className="px-3 py-3">Phone</th>
+                <th className="px-3 py-3 whitespace-nowrap">Campaign</th>
+                <th className="px-3 py-3">Batch</th>
+                <th className="px-3 py-3">Email</th>
+                <th className="px-3 py-3">Reply</th>
+                <th className="px-3 py-3">Deal</th>
+                <th className="px-3 py-3">Next Action</th>
+                <th className="px-3 py-3">Notes</th>
+                <th className="px-3 py-3">User</th>
+                <th className="px-3 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
               {visibleContacts.map((contact) => (
                 <tr key={contact.id} className="align-top">
-                  <td className="px-4 py-3">
+                  <td className="min-w-[190px] px-3 py-3">
                     <p className="font-medium text-ink">{contact.companyName || 'Untitled Company'}</p>
                     <p className="text-xs text-steel">{contact.brokerName}</p>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="min-w-[190px] px-3 py-3">
                     <p>{contact.contactName || '-'}</p>
                     <p className="text-xs text-steel">{contact.email || '-'}</p>
                   </td>
-                  <td className="px-4 py-3">{contact.phone || '-'}</td>
-                  <td className="px-4 py-3">Campaign {contact.campaign}</td>
-                  <td className="px-4 py-3">{contact.batch || '-'}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3 whitespace-nowrap">{contact.phone || '-'}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">Campaign {contact.campaign}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">{contact.batch || '-'}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">
                     <span className={statusClass(contact.emailStatus)}>{contact.emailStatus}</span>
                   </td>
-                  <td className="px-4 py-3">{contact.replyStatus || 'No Reply'}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3 whitespace-nowrap">{contact.replyStatus || 'No Reply'}</td>
+                  <td className="min-w-[150px] px-3 py-3">
                     <p>{contact.dealStatus || '-'}</p>
                     <p className="text-xs text-steel">{contact.responseCategory || '-'}</p>
                   </td>
-                  <td className="px-4 py-3">
-                    <p className="max-w-[12rem] truncate">{contact.nextAction || '-'}</p>
+                  <td className="min-w-[170px] px-3 py-3">
+                    <p className="max-w-[16rem] truncate">{contact.nextAction || '-'}</p>
                     <p className={followUpDateClass(contact.nextFollowUpDate)}>
                       {formatFollowUpDate(contact.nextFollowUpDate)}
                     </p>
                   </td>
-                  <td className="max-w-xs px-4 py-3 text-steel">
+                  <td className="min-w-[180px] max-w-sm px-3 py-3 text-steel">
                     <p className="line-clamp-2">{contact.notes || '-'}</p>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3">
                     <InitialsBadge
                       initials={contact.updatedByInitials || contact.createdByInitials}
                       name={contact.updatedByName || contact.createdByName}
                     />
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2">
-                      <IconButton label="Send email" onClick={() => setEmailPreviewContacts([contact])}>
-                        <Mail size={16} />
-                      </IconButton>
+                  <td className="px-3 py-3">
+                    <div className="flex justify-end gap-1.5">
+                      {isValidEmail(contact.email) ? (
+                        <IconButton label="Send email" onClick={() => setEmailPreviewContacts([contact])}>
+                          <Mail size={16} />
+                        </IconButton>
+                      ) : null}
                       <IconButton label="Log reply" onClick={() => setReplyContact(contact)}>
                         <MessageSquareReply size={16} />
                       </IconButton>
@@ -394,7 +397,7 @@ export default function ContactsTable({ contacts, fixedCampaign }: ContactsTable
               ))}
               {!visibleContacts.length ? (
                 <tr>
-                  <td colSpan={12} className="px-4 py-10 text-center text-sm text-steel">
+                  <td colSpan={12} className="px-3 py-10 text-center text-sm text-steel">
                     No contacts match the current view.
                   </td>
                 </tr>

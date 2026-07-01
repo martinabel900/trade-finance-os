@@ -3,12 +3,14 @@ import {
   CalendarClock,
   FileSpreadsheet,
   Download,
+  MailQuestion,
   LayoutDashboard,
   LogOut,
   Mail,
   Send,
   Settings,
   Users,
+  UserRoundCheck,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
@@ -23,11 +25,13 @@ interface NavItem {
 const navItems: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/contacts', label: 'Contacts', icon: Users },
+  { to: '/brokers', label: 'Brokers', icon: UserRoundCheck },
   { to: '/campaign-a', label: 'Campaign A', icon: Mail },
   { to: '/campaign-b', label: 'Campaign B', icon: Mail },
   { to: '/campaign-c', label: 'Campaign C', icon: Mail },
   { to: '/email-queue', label: 'Email Queue', icon: Send },
   { to: '/follow-ups', label: 'Follow-ups', icon: CalendarClock },
+  { to: '/missing-emails', label: 'Missing Emails', icon: MailQuestion },
   { to: '/import', label: 'Import', icon: FileSpreadsheet },
   { to: '/export', label: 'Export', icon: Download },
   { to: '/settings', label: 'Settings', icon: Settings },
@@ -108,7 +112,7 @@ export default function AppLayout() {
           </nav>
         </header>
 
-        <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <main className="w-full px-4 py-6 sm:px-5 lg:px-6 xl:px-8">
           <Outlet />
         </main>
       </div>
