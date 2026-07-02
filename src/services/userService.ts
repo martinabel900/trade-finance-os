@@ -1,4 +1,5 @@
 import type { User } from 'firebase/auth';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import {
   collection,
   doc,
@@ -15,7 +16,8 @@ import {
   type Timestamp,
   type Unsubscribe,
 } from 'firebase/firestore';
-import { db } from '../firebase/firebase';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { app, auth, db } from '../firebase/firebase';
 import { getUserSignature } from '../utils/userAttribution';
 
 export const USERS_COLLECTION = 'users';
@@ -36,6 +38,40 @@ export interface UserProfile {
   updatedAt?: Timestamp | null;
   createdByUid: string;
   updatedByUid: string;
+}
+
+export interface CreateAppUserInput {
+  email: string;
+  displayName: string;
+  initials: string;
+  role: UserRole;
+}
+
+export interface UpdateAppUserInput {
+  uid: string;
+  displayName: string;
+  initials: string;
+  role: UserRole;
+  status: UserStatus;
+}
+
+interface CreateAppUserResult {
+  success: boolean;
+  uid: string;
+  email: string;
+  resetEmail: string;
+  message: string;
+}
+
+interface UpdateAppUserResult {
+  success: boolean;
+  message: string;
+}
+
+interface PasswordResetApprovalResult {
+  success: boolean;
+  email: string;
+  message: string;
 }
 
 const usersRef = collection(db, USERS_COLLECTION);
@@ -102,27 +138,28 @@ export function subscribeToUsers(
   );
 }
 
-export async function updateUserProfile(
-  userId: string,
-  updates: Partial<Pick<UserProfile, 'role' | 'status'>>,
-  actorUid: string,
-): Promise<void> {
-  const payload: Partial<UserProfile> = {
-    updatedByUid: actorUid,
-  };
+export async function createAppUser(input: CreateAppUserInput): Promise<CreateAppUserResult> {
+  const functions = getFunctions(app);
+  const callable = httpsCallable<CreateAppUserInput, CreateAppUserResult>(functions, 'createAppUser');
+  const result = await callable(input);
 
-  if (updates.role !== undefined) {
-    payload.role = USER_ROLES.includes(updates.role) ? updates.role : 'user';
-  }
+  return result.data;
+}
 
-  if (updates.status !== undefined) {
-    payload.status = USER_STATUSES.includes(updates.status) ? updates.status : 'active';
-  }
+export async function updateAppUser(input: UpdateAppUserInput): Promise<UpdateAppUserResult> {
+  const functions = getFunctions(app);
+  const callable = httpsCallable<UpdateAppUserInput, UpdateAppUserResult>(functions, 'updateAppUser');
+  const result = await callable(input);
 
-  await updateDoc(doc(db, USERS_COLLECTION, userId), {
-    ...payload,
-    updatedAt: serverTimestamp(),
-  });
+  return result.data;
+}
+
+export async function sendAppUserPasswordReset(userId: string): Promise<void> {
+  const functions = getFunctions(app);
+  const callable = httpsCallable<{ uid: string }, PasswordResetApprovalResult>(functions, 'approvePasswordReset');
+  const result = await callable({ uid: userId });
+
+  await sendPasswordResetEmail(auth, result.data.email);
 }
 
 function userProfileFromSnapshot(
