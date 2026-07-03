@@ -1,5 +1,4 @@
 import type { User } from 'firebase/auth';
-import { sendPasswordResetEmail } from 'firebase/auth';
 import {
   collection,
   doc,
@@ -17,7 +16,7 @@ import {
   type Unsubscribe,
 } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { app, auth, db } from '../firebase/firebase';
+import { app, db } from '../firebase/firebase';
 import { getUserSignature } from '../utils/userAttribution';
 
 export const USERS_COLLECTION = 'users';
@@ -157,9 +156,7 @@ export async function updateAppUser(input: UpdateAppUserInput): Promise<UpdateAp
 export async function sendAppUserPasswordReset(userId: string): Promise<void> {
   const functions = getFunctions(app);
   const callable = httpsCallable<{ uid: string }, PasswordResetApprovalResult>(functions, 'approvePasswordReset');
-  const result = await callable({ uid: userId });
-
-  await sendPasswordResetEmail(auth, result.data.email);
+  await callable({ uid: userId });
 }
 
 function userProfileFromSnapshot(

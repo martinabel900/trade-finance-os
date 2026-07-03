@@ -33,7 +33,8 @@ export async function sendSmtpCampaignEmail(input: CampaignEmailInput): Promise<
   const fromEmail = getRequiredEnv('SMTP_FROM_EMAIL');
   const replyTo = getRequiredEnv('SMTP_REPLY_TO');
   const testMode = isEmailTestMode();
-  const recipient = testMode ? 'martin@tfciglobal.com' : input.to;
+  const testRecipient = process.env.SMTP_TEST_RECIPIENT || fromEmail;
+  const recipient = testMode ? testRecipient : input.to;
   const cc = testMode ? undefined : input.cc?.trim() || undefined;
   const outboundTemplate = testMode ? withTestModeHeader(template, input) : template;
 

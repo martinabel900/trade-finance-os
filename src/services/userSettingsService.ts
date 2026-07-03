@@ -9,7 +9,7 @@ import { auth, db } from '../firebase/firebase';
 
 export const DEFAULT_EMAIL_SIGNATURE = [
   'Trade Finance Company International',
-  'martin@tfciglobal.com',
+  'martin@tradefinancecompanyinternational.com',
 ].join('\n');
 
 export interface UserEmailSettings {

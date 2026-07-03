@@ -97,7 +97,7 @@ export default function EmailPreviewModal({
             <div className="space-y-4">
               <div className="rounded border border-line bg-paper p-4">
                 <p className="text-xs font-medium uppercase tracking-wide text-steel">From</p>
-                <p className="mt-1 text-sm">Trade Finance Company International &lt;martin@tfciglobal.com&gt;</p>
+                <p className="mt-1 text-sm">Trade Finance Company International &lt;martin@tradefinancecompanyinternational.com&gt;</p>
                 <p className="mt-2 text-sm text-steel">To: {toLabel}</p>
                 <p className="mt-1 text-sm text-steel">
                   CC Broker: {uniqueCcRecipients.length ? uniqueCcRecipients.join(', ') : 'No'}

@@ -216,9 +216,11 @@ function UserManagement({ currentUserId }: { currentUserId: string }) {
 
     try {
       await sendAppUserPasswordReset(user.uid);
-      setMessage(`Password reset email sent to ${user.email}.`);
+      setMessage(
+        `Password setup email sent to ${user.email}. The user should check their inbox, click the secure link, create a password, then return to Trade Finance OS and log in.`,
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to send password reset email.');
+      setError(err instanceof Error ? err.message : 'Unable to send password setup email.');
     } finally {
       setSavingUserId('');
     }
@@ -303,7 +305,7 @@ function UserManagement({ currentUserId }: { currentUserId: string }) {
                       onClick={() => handleSendPasswordReset(user)}
                       className="rounded border border-line px-3 py-2 text-xs font-semibold text-ink hover:bg-paper disabled:opacity-60"
                     >
-                      Send Password Reset
+                      Send Password Setup Email
                     </button>
                   </div>
                 </td>
@@ -374,13 +376,7 @@ function UserModal({
           initials: form.initials,
           role: form.role,
         });
-
-        try {
-          await sendAppUserPasswordReset(result.uid);
-          onSaved(`${result.message} Password reset email sent to ${result.email}.`);
-        } catch (resetError) {
-          onSaved(`${result.message} Password reset email was not sent: ${resetError instanceof Error ? resetError.message : 'Unknown error'}`);
-        }
+        onSaved(result.message || 'User created and password setup email sent.');
       } else {
         if (form.uid === currentUserId && form.status === 'inactive') {
           onError('You cannot make your own admin account inactive.');
